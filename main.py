@@ -47,7 +47,6 @@ def main():
     MCP_PATH = input("MCP文件的目录:").strip()
     if not os.path.exists(MCP_PATH):
         print(f"[Warning] 文件不存在！")
-        return 
     mcp_module, funcs = load_mcp_mod(MCP_PATH)
     if not funcs:
         print("[Warning] MCP文件有问题，无法识别文件")
@@ -65,29 +64,46 @@ def main():
         api_key=api_key,
         base_url='https://api.deepseek.com'
     )
-    system_prompt = """你是一个AI助手，可以帮用户操作电脑文件。
-    当你需要执行文件操作时，请使用以下格式：
-    
-    EXECUTE: 函数名, 参数1, 参数2, ...
-    
-    只能输出这一行，不能有其他输出，例如：
-    
-    EXECUTE: mv, file1.txt, file2.txt
-    
-    或
-    
-    EXECUTE: cp, source.txt, dest.txt
-    
-    执行后我会告诉你结果，然后你可以继续对话。
-    如果任务需要多步操作，请一步一步来。
-    
-    如果上一步操作失败，请分析原因并尝试其他方法。
-    你不要输出原因，而应该接着在下一个输出使用你认为正确的输出
-    如果所有步骤都完成，请总结操作结果。
+    system_prompt = """
+    你是一个AI助手，主要职责是满足用户需求，同时在必要时协助操作电脑。
+
+当用户明确要求执行电脑操作（例如移动文件、复制文件、运行程序等）时，请严格使用以下格式输出指令（仅一行，无其他文本）：
+
+EXECUTE: 命令 ￥| 参数1 ￥| 参数2 ￥| ...
+其中 ￥| 两个字符共同组成一个分隔符
+
+例如：
+EXECUTE: mv ￥| file1.txt ￥| file2.txt
+EXECUTE: cp ￥| source.txt ￥| dest.txt
+
+重要规则：
+
+仅在用户明确要求操作电脑时使用EXECUTE指令，其他所有情况（包括写小说、回答问题、提供建议、创作内容等）都直接输出内容。
+
+如果用户要求创作内容（如小说、文章、代码等），请直接输出内容本身，不要尝试保存或操作文件，除非用户明确要求保存到特定位置。
+
+如果任务需要多步操作，请逐步执行，每次只输出一个EXECUTE指令。
+
+如果操作失败，请在下一步尝试其他可行方案，不要解释原因或描述过程。
+
+所有操作完成后，请简要总结结果。
+
+请始终遵循以上规则，确保响应简洁、准确。
     """
     addition_sys_prompt = input("(可选) 预设一下系统提示:")
     if addition_sys_prompt:
         system_prompt += addition_sys_prompt
+    
+    TEMPERATURE = input("(可选，默认为 1.0 ) 请设置一下温度值:")
+    
+    if not TEMPERATURE:
+        TEMPERATURE = 1.0
+    TEMPERATURE = float(TEMPERATURE)
+    while (TEMPERATURE > 1.5) or (TEMPERATURE < 0.0):
+        TEMPERATURE = input("温度值必须在 0-1.5 之间！请重新设置温度值:")
+        if not TEMPERATURE:
+            TEMPERATURE = 1.0
+            break
     
     tools_desc = gen_tools_desc(funcs)
     if tools_desc:
@@ -100,7 +116,7 @@ def main():
     while True:
         try:
             user_inp = input("\n>>").strip()
-            if user_inp.lower() in ['exit', 'quit', 'bye', '退出']:
+            if user_inp.lower() in ['exit', 'quit', 'bye', '退出', '再见']:
                 print("再见！")
                 break
             if not user_inp:
@@ -112,6 +128,7 @@ def main():
             for step in range(MAX_ITER):
                 response = client.chat.completions.create(
                     model="deepseek-chat",
+                    temperature=TEMPERATURE,
                     messages=conv_his,
                     stream=False
                 )
@@ -119,7 +136,7 @@ def main():
                 if get_reply.startswith("EXECUTE:"):
                     print(f"\n[步骤 {step + 1} ][AI 请求执行] {get_reply}")
                     
-                    tokens = get_reply.replace("EXECUTE:", "").strip().split(",")
+                    tokens = get_reply.replace("EXECUTE:", "").strip().split("￥|")
                     tokens = [t.strip() for t in tokens]
                     
                     if len(tokens) < 1:

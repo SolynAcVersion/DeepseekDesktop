@@ -20,6 +20,7 @@
 - 支持 SSE MCP Server
 - 支持直接调用使用 `MCP.so` 等在线 MCP Server 仓库
 - 零 AI 基础人群友好的 GUI 界面
+- i18n
 - 不仅支持 DeepSeek，兼容各类 AI API 接口
 
 
