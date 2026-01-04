@@ -79,6 +79,11 @@ def main():
     EXECUTE: cp, source.txt, dest.txt
     
     执行后我会告诉你结果，然后你可以继续对话。
+    如果任务需要多步操作，请一步一步来。
+    
+    如果上一步操作失败，请分析原因并尝试其他方法。
+    你不要输出原因，而应该接着在下一个输出使用你认为正确的输出
+    如果所有步骤都完成，请总结操作结果。
     """
     addition_sys_prompt = input("(可选) 预设一下系统提示:")
     if addition_sys_prompt:
@@ -102,40 +107,46 @@ def main():
                 continue
             conv_his.append({"role": "user", "content": user_inp})
             
-            response = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=conv_his,
-                stream=False
-            )
-            get_reply = response.choices[0].message.content
-            if get_reply.startswith("EXECUTE:"):
-                print(f"\n[AI 请求执行] {get_reply}")
-                
-                tokens = get_reply.replace("EXECUTE:", "").strip().split(",")
-                tokens = [t.strip() for t in tokens]
-                
-                if len(tokens) < 1:
-                    res = "错误！你的命令格式不正确"
-                else:
-                    func_name = tokens[0]
-                    args = tokens[1: ] if len(tokens) > 1 else []
-                    res = exec_func(funcs, func_name, *args)
-                print(f"[Info] AI 执行结果：{res}")
-                
-                conv_his.append({"role": "assistant", "content": get_reply})
-                conv_his.append({"role": "user", "content": f"执行结果：{res}"})
-                
-                cont_resp = client.chat.completions.create(
-                    model = "deepseek-chat",
-                    messages = conv_his,
-                    stream = False
+            MAX_ITER = 15
+            final_resp = ""
+            for step in range(MAX_ITER):
+                response = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=conv_his,
+                    stream=False
                 )
-                
-                get_reply = cont_resp.choices[0].message.content
-                conv_his.append({"role": "assistant", "content": get_reply})
+                get_reply = response.choices[0].message.content
+                if get_reply.startswith("EXECUTE:"):
+                    print(f"\n[步骤 {step + 1} ][AI 请求执行] {get_reply}")
+                    
+                    tokens = get_reply.replace("EXECUTE:", "").strip().split(",")
+                    tokens = [t.strip() for t in tokens]
+                    
+                    if len(tokens) < 1:
+                        res = "错误！你的命令格式不正确"
+                    else:
+                        func_name = tokens[0]
+                        args = tokens[1: ] if len(tokens) > 1 else []
+                        res = exec_func(funcs, func_name, *args)
+                        
+                    print(f"[Info] AI 执行结果：{res}")
+                    
+                    conv_his.append({"role": "assistant", "content": get_reply})
+                    conv_his.append({"role": "user", "content": f"执行结果：{res}\n请根据这个结果决定下一步操作。如果任务完成，请总结告诉我结果。"})
+                    
+                    # if "错误" in res or "失败" in res:
+                    #     print("[Warning] 执行失败，建议手动检查")
+                    #     final_resp = f"上一步执行失败：{res}"
+                    #     break
+                else:
+                    final_resp = get_reply
+                    conv_his.append({"role": "assistant", "content": get_reply}) 
+                    break
             else:
-                conv_his.append({"role": "assistant", "content": get_reply}) 
-            print(f"\n[AI] {get_reply}")    
+                print(f"[Warning] 已达最大执行步数 {MAX_ITER} ,自动停止")
+                final_resp = f"已达到最大执行步数({MAX_ITER})，任务可能未完全完成"
+            if final_resp:
+                print(f"\n[AI] {final_resp}")
             
         except KeyboardInterrupt:
             print("\n[Error] 中断操作，再见！")
