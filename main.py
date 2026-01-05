@@ -4,6 +4,8 @@ import importlib.util
 from openai import OpenAI
 import json
 
+
+
 def load_mcp_mod(mcp_path):
     try:
         module_name = os.path.basename(mcp_path).replace('.py', '')
@@ -25,6 +27,22 @@ def load_mcp_mod(mcp_path):
         print(f"[Warning] 加载失败：{e}")
         return None, {}
 
+
+def load_mult_mcp_mod(mcp_paths):
+    all_funcs = {}
+    all_mods = []
+    
+    for path in mcp_paths:
+        mod, funcs = load_mcp_mod(path)
+        if mod:
+            all_mods.append(mod)
+        if funcs:
+            for func_name, func in funcs.items():
+                if func_name in all_funcs:
+                    print(f"[Warning] 函数 '{func_name}' 在多个MCP文件中存在，将使用最后加载的版本")
+                all_funcs[func_name] = func
+    return all_mods, all_funcs
+
 def gen_tools_desc(funcs):
     if not funcs:
         return ""
@@ -44,10 +62,21 @@ def exec_func(funcs, func_name, *args):
         return f"执行失败：{e}"
 
 def main():
-    MCP_PATH = input("MCP文件的目录:").strip()
-    if not os.path.exists(MCP_PATH):
-        print(f"[Warning] 文件不存在！")
-    mcp_module, funcs = load_mcp_mod(MCP_PATH)
+    MCP_PATH = input("MCP文件所在的目录(多个文件用空格隔开):").strip()
+    mcp_paths = [p.strip() for p in MCP_PATH.split() if p.strip()]
+    
+    if not mcp_paths:
+        print("[Error] 未输入任何文件路径")
+    
+    valid_paths = []
+    for path in mcp_paths:
+        if not os.path.exists(path):
+            print(f"[Warning] 文件不存在：{path}")
+        else:
+            valid_paths.append(path)
+
+    print(f"[Info] 将加载 {len(valid_paths)} 个MCP文件")
+    mcp_module, funcs = load_mult_mcp_mod(valid_paths)
     if not funcs:
         print("[Warning] MCP文件有问题，无法识别文件")
     api_key = input("输入 DeepSeek API KEY（或留空使用环境变量 DEEPSEEK_API_KEY ）:").strip()
@@ -86,6 +115,12 @@ EXECUTE: cp ￥| source.txt ￥| dest.txt
 
 如果操作失败，请在下一步尝试其他可行方案，不要解释原因或描述过程。
 
+严禁说 
+"让我尝试使用系统命令来运行Python："
+"我需要先查看完整的HTML文件内容。让我重新读取文件"
+"我尝试使用Python来解析HTML文件并查找PDF链接"
+之类的思路!!!
+
 所有操作完成后，请简要总结结果。
 
 请始终遵循以上规则，确保响应简洁、准确。
@@ -94,17 +129,20 @@ EXECUTE: cp ￥| source.txt ￥| dest.txt
     if addition_sys_prompt:
         system_prompt += addition_sys_prompt
     
-    TEMPERATURE = input("(可选，默认为 1.0 ) 请设置一下温度值:")
-    
-    if not TEMPERATURE:
+    TEMPERATUREs = input("(可选，默认为 1.0 ) 请设置一下温度值:").strip()
+
+    if not TEMPERATUREs:
         TEMPERATURE = 1.0
-    TEMPERATURE = float(TEMPERATURE)
-    while (TEMPERATURE > 1.5) or (TEMPERATURE < 0.0):
-        TEMPERATURE = input("温度值必须在 0-1.5 之间！请重新设置温度值:")
-        if not TEMPERATURE:
+    else:
+        TEMPERATURE = float(TEMPERATUREs)
+
+    while TEMPERATURE > 1.5 or TEMPERATURE < 0.0:
+        print("温度值应在 0.0 到 1.5 之间，请重新输入")
+        temp_input = input("请设置温度值: ").strip()
+        if not temp_input:
             TEMPERATURE = 1.0
-            break
-    
+        else:
+            TEMPERATURE = float(temp_input)
     tools_desc = gen_tools_desc(funcs)
     if tools_desc:
         system_prompt = tools_desc + '\n' + system_prompt
