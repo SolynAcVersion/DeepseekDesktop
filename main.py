@@ -3,25 +3,51 @@ import sys
 import importlib.util
 from openai import OpenAI
 import json
-
+from mcp_utils import MCPServerManager, load_mcp_conf, exec_mcp_tools
 
 
 def load_mcp_mod(mcp_path):
     try:
-        module_name = os.path.basename(mcp_path).replace('.py', '')
-        spec = importlib.util.spec_from_file_location(module_name, mcp_path)
-        if spec is None:
-            raise ImportError(f"[Warning] 无法从 {mcp_path} 加载模块")
-        mcp_module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = mcp_module
-        spec.loader.exec_module(mcp_module)
-        print(f"[Info] 加载 {module_name} 成功")
-        funcs = {}
-        for attr_name in dir(mcp_module):
-            attr = getattr(mcp_module, attr_name)
-            if callable(attr) and not attr_name.startswith('_'):
-                funcs[attr_name] = attr
-        return mcp_module, funcs
+        if mcp_path.endswith('.json'):
+            mcp_manager = MCPServerManager()
+            tool_names = load_mcp_conf(mcp_path, mcp_manager)
+            if not tool_names:
+                return None, {}
+            funcs = {}
+            for ser_name in mcp_manager.servers.keys():
+                for tool in mcp_manager.tools.get(ser_name, []):
+                    tool_name = tool.get('name', '')
+                    if tool_name:
+                        func_name = f"mcp_{ser_name}_{tool_name}"
+                        def make_tool_func(name_ser, name_tool, desc):
+                            def tool_func(**kwargs):
+                                res = mcp_manager.call_tool(name_ser, name_tool, kwargs)
+                                return json.dumps(res, ensure_ascii=False, indent=2)
+                            tool_func.__name__ = name_tool
+                            tool_func.__doc__ = tool.get('description', desc)
+                            return tool_func
+                        
+                        funcs[func_name] = make_tool_func(ser_name, tool_name, tool.get('description', '无描述'))
+            class MCPModule:
+                def __init__(self):
+                    self.manager = mcp_manager
+            return MCPModule(), funcs             
+                    
+        else:
+            module_name = os.path.basename(mcp_path).replace('.py', '')
+            spec = importlib.util.spec_from_file_location(module_name, mcp_path)
+            if spec is None:
+                raise ImportError(f"[Warning] 无法从 {mcp_path} 加载模块")
+            mcp_module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = mcp_module
+            spec.loader.exec_module(mcp_module)
+            print(f"[Info] 加载 {module_name} 成功")
+            funcs = {}
+            for attr_name in dir(mcp_module):
+                attr = getattr(mcp_module, attr_name)
+                if callable(attr) and not attr_name.startswith('_'):
+                    funcs[attr_name] = attr
+            return mcp_module, funcs
         
     except Exception as e:
         print(f"[Warning] 加载失败：{e}")
@@ -56,13 +82,27 @@ def exec_func(funcs, func_name, *args):
     if func_name not in funcs:
         return f"错误：函数 '{func_name}' 不存在"
     try:
-        res = funcs[func_name](*args)
+        # 对于MCP工具（以mcp_开头），需要关键字参数
+        if func_name.startswith('mcp_'):
+            kwargs = {}
+            for arg in args:
+                if '=' in arg:
+                    key, value = arg.split('=', 1)
+                    kwargs[key.strip()] = value.strip()
+                elif arg.strip():
+                    kwargs['value'] = arg.strip()
+            
+            res = funcs[func_name](**kwargs)
+        else:
+            # 普通函数使用位置参数
+            res = funcs[func_name](*args)
+        
         return f"执行成功：{res}"
     except Exception as e:
         return f"执行失败：{e}"
 
 def main():
-    MCP_PATH = input("MCP文件所在的目录(多个文件用空格隔开):").strip()
+    MCP_PATH = input("MCP文件所在的目录(支持.py或.json)(多个文件用空格隔开):").strip()
     mcp_paths = [p.strip() for p in MCP_PATH.split() if p.strip()]
     
     if not mcp_paths:
@@ -107,7 +147,7 @@ EXECUTE: cp ￥| source.txt ￥| dest.txt
 
 重要规则：
 
-仅在用户明确要求操作电脑时使用EXECUTE指令，其他所有情况（包括写小说、回答问题、提供建议、创作内容等）都直接输出内容。
+仅在用户明确要求操作电脑、查询时间等查询联网接口时使用EXECUTE指令，其他所有情况（包括写小说、回答问题、提供建议、创作内容等）都直接输出内容。
 
 如果用户要求创作内容（如小说、文章、代码等），请直接输出内容本身，不要尝试保存或操作文件，除非用户明确要求保存到特定位置。
 
@@ -159,6 +199,20 @@ EXECUTE: cp ￥| source.txt ￥| dest.txt
                 break
             if not user_inp:
                 continue
+            
+            if user_inp.lower() in ['tool', 'tools', '工具']:
+                print("\n可用工具：")
+                for i, func_name in enumerate(funcs.keys(), 1):
+                    func = func[func_name]
+                    doc = func.__doc__ or "无描述"
+                    print(f"{i:2}. {func_name}: {doc[:60]}...")
+                continue
+            
+            if user_inp.lower() in ['clear', '清空']:
+                conv_his = [{"role": "system", "content": system_prompt}]
+                print("对话历史已清空")
+                continue
+            
             conv_his.append({"role": "user", "content": user_inp})
             
             MAX_ITER = 15
