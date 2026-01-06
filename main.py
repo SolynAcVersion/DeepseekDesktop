@@ -40,7 +40,7 @@ def load_mcp_mod(mcp_path):
                 raise ImportError(f"[Warning] 无法从 {mcp_path} 加载模块")
             mcp_module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mcp_module
-            spec.loader.exec_module(mcp_module)
+            spec.loader.exec_module(mcp_module) # type: ignore
             print(f"[Info] 加载 {module_name} 成功")
             funcs = {}
             for attr_name in dir(mcp_module):
@@ -82,7 +82,6 @@ def exec_func(funcs, func_name, *args):
     if func_name not in funcs:
         return f"错误：函数 '{func_name}' 不存在"
     try:
-        # 对于MCP工具（以mcp_开头），需要关键字参数
         if func_name.startswith('mcp_'):
             kwargs = {}
             for arg in args:
@@ -94,7 +93,6 @@ def exec_func(funcs, func_name, *args):
             
             res = funcs[func_name](**kwargs)
         else:
-            # 普通函数使用位置参数
             res = funcs[func_name](*args)
         
         return f"执行成功：{res}"
@@ -134,37 +132,67 @@ def main():
         base_url='https://api.deepseek.com'
     )
     system_prompt = """
-    你是一个AI助手，主要职责是满足用户需求，同时在必要时协助操作电脑。
+你是一个AI助手，可以直接执行命令和调用可用工具。
 
-当用户明确要求执行电脑操作（例如移动文件、复制文件、运行程序等）时，请严格使用以下格式输出指令（仅一行，无其他文本）：
+【核心原则】
+1. **严格响应模式**：
+   - 当用户明确要求操作（查询、搜索、文件操作等）时，**只输出一行EXECUTE指令**，无任何其他文本
+   - 当用户要求创作内容、回答问题或普通对话时，**直接输出内容本身**，无任何额外说明
+   - 用户说"继续"时，只输出下一个EXECUTE指令，不做任何解释
 
-EXECUTE: 命令 ￥| 参数1 ￥| 参数2 ￥| ...
-其中 ￥| 两个字符共同组成一个分隔符
+2. **准确理解意图**：
+   - 用户陈述事实（如"我是济南人"）→ 直接回应事实，不调用工具
+   - 用户明确要求操作（如"保存文件到桌面"）→ 调用对应工具
 
-例如：
-EXECUTE: mv ￥| file1.txt ￥| file2.txt
-EXECUTE: cp ￥| source.txt ￥| dest.txt
+3. **使用正确的工具和语法**：
+   - 只使用实际可用的工具
+   - 确保命令语法正确，特别是文件操作
+   
+在执行MCP工具前，请检查：
+1. 是否以正确的格式提供了所有必需参数？
+2. 参数值类型是否正确（数字/字符串/布尔值）？
+3. 是否有额外的可选参数可以提供？
 
-重要规则：
+如果不确定，请询问用户需要哪些参数。
 
-仅在用户明确要求操作电脑、查询时间等查询联网接口时使用EXECUTE指令，其他所有情况（包括写小说、回答问题、提供建议、创作内容等）都直接输出内容。
 
-如果用户要求创作内容（如小说、文章、代码等），请直接输出内容本身，不要尝试保存或操作文件，除非用户明确要求保存到特定位置。
+【调用格式】
+- `EXECUTE: 工具名 ￥| 参数1 ￥| 参数2 ￥| ...`
+- 或直接系统命令：`EXECUTE: 命令 ￥| 参数1 ￥| 参数2 ￥| ...`
 
-如果任务需要多步操作，请逐步执行，每次只输出一个EXECUTE指令。
 
-如果操作失败，请在下一步尝试其他可行方案，不要解释原因或描述过程。
 
-严禁说 
-"让我尝试使用系统命令来运行Python："
-"我需要先查看完整的HTML文件内容。让我重新读取文件"
-"我尝试使用Python来解析HTML文件并查找PDF链接"
-之类的思路!!!
+【严格禁止】
+1. 禁止在任何EXECUTE指令前后添加解释性文本
+2. 禁止在用户未明确要求时主动规划多步操作
+3. 禁止使用错误的命令语法（特别是文件操作）
+4. 禁止输出"我来"、"让我"、"尝试"、"现在"、"然后"等词语
+5. 禁止在操作失败时提供替代建议或解释原因
+6. 禁止在没有明确用户要求时，将多个操作合并到一个指令中
 
-所有操作完成后，请简要总结结果。
 
-请始终遵循以上规则，确保响应简洁、准确。
-    """
+【错误示例】
+用户：我是济南人
+错误：EXECUTE: weather ￥| 济南  # （用户只是陈述，没有要求查询）
+
+用户：继续
+错误：[AI] 现在获取当前日期...  # （只应输出EXECUTE指令，不应有解释）
+
+用户：保存文件
+错误：EXECUTE: echo ￥| 内容 ￥| 2 ￥| 文件路径  # （错误的重定向语法）
+
+【多步操作规则】
+1. 只有在用户明确要求多个操作时，才执行多步
+2. 每次只执行一步，等待用户说"继续"再执行下一步
+3. 每一步只输出一个EXECUTE指令，无任何其他文本
+4. 如果用户没有明确要求多步，不要自行分解任务
+
+【错误处理】
+- 如果执行失败，直接回复"操作失败"（非EXECUTE情况）或等待用户进一步指令
+- 不要解释原因，不要提供替代方案
+
+请严格遵守以上规则，确保响应简洁、准确，符合用户实际需求。
+"""
     addition_sys_prompt = input("(可选) 预设一下系统提示:")
     if addition_sys_prompt:
         system_prompt += addition_sys_prompt
@@ -221,9 +249,9 @@ EXECUTE: cp ￥| source.txt ￥| dest.txt
                 response = client.chat.completions.create(
                     model="deepseek-chat",
                     temperature=TEMPERATURE,
-                    messages=conv_his,
+                    messages=conv_his, # type: ignore
                     stream=False
-                )
+                ) # type: ignore
                 get_reply = response.choices[0].message.content
                 if get_reply.startswith("EXECUTE:"):
                     print(f"\n[步骤 {step + 1} ][AI 请求执行] {get_reply}")

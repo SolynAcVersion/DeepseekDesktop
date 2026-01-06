@@ -66,38 +66,51 @@ def cat(filepath):
     
     return f"文件 {filepath} 的内容:\n{content[:500]}..." if len(content) > 500 else content
 
-def echo(text, mode ,filepath=None):
-    """将文本内容输出或追加到文件或覆盖文件
-    
-    参数：
-    text: 需要输出的文本内容
-    mode：是追加还是覆盖源文本中的文本，追加为 `1` ，覆盖为 `2`
-    filepath: 可选的文件路径，如果提供则将文本追加到该文件末尾
-    
-    这里的text不支持 "\\n" 等转义字符，只会将输入完完全全地输入文件
-    如
-    EXECUTE: echo ￥| #include <stdio.h>\\n\\nint main() {\\n    printf("Hello, World!\\n");\\n    return 0;\\n} ￥| 1 ￥| C:\\Users\\2300\Desktop\\maaaa.c
-    只会在文件中得到
-    #include <stdio.h>\\n\\nint main() {\\n    printf("Hello, World!\\n");\\n    return 0;\\n}
-    是明显违背要求的
-    
-    使用样例：
-    echo ￥| helloworld ￥| 1 ￥| .\\a.txt
-    
-    会将"helloworld"追加到 .\\a.txt 文件末尾
-    如果文件不存在会自动创建
+def write_to_file(text: str, filepath: str, mode: int) -> str:
     """
-    if filepath:
-        if mode == 1:
-            with open(filepath, 'a', encoding='utf-8') as f:
-                f.write(text + '\n')
-            return f"已将文本追加到 {filepath}"
-        else:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(text + '\n')
-    else:
+    将文本写入文件或直接返回文本
+    
+    Args:
+        text: 要写入的文本
+        filepath: 文件路径，如果为None则直接返回文本
+        mode: 写入模式，0为追加写入，1为覆盖写入
+        
+    Returns:
+        str: 写入成功的信息或直接返回的文本
+        
+    Raises:
+        ValueError: 文件路径无效或写入模式错误
+        IOError: 文件写入失败
+    """
+    import os
+    
+    # 如果没有提供文件路径，直接返回文本
+    if not filepath:
         return text
     
+    # 参数验证
+    if not isinstance(text, str):
+        raise ValueError('文本必须是字符串类型')
+    
+    try:
+        # 确保目录存在
+        save_dir = os.path.dirname(filepath)
+        if save_dir and not os.path.exists(save_dir):
+            os.makedirs(save_dir, exist_ok=True)
+        
+        # 根据模式写入文件
+        if mode == 0:  # 覆盖模式
+            with open(filepath, 'a', encoding='utf-8') as f:
+                f.write(text + '\n')
+            return f"已将文本覆盖到 {filepath}"
+        else:  # 追加模式 (mode == 0)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(text + '\n')
+            return f"已将文本追加 {filepath}"
+            
+    except Exception as e:
+        raise IOError(f'文件写入失败: {str(e)}')
+
     
 def find_lines_in_file(file_path: str, search_string: str, case_sensitive: bool = True) -> list:
     """

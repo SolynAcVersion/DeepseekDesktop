@@ -11,12 +11,12 @@ class MCPServerManager:
         self.servers = {}
         self.processes = {}
         self.tools = {}
-        self.output_queues = {}  # 存储服务器输出
-        self.stop_events = {}    # 停止事件
-        self.read_threads = {}   # 读取线程
+        self.output_queues = {}
+        self.stop_events = {}
+        self.read_threads = {}
     
     def parse_config(self, conf_json):
-        # 解析MCP配置
+        # 解析MCP
         try:
             conf = json.loads(conf_json)
             mcp_servers = conf.get("mcpServers", {})
@@ -39,6 +39,12 @@ class MCPServerManager:
         ser_conf = self.servers[ser_name]
         
         try:
+            
+            use_shell = False
+            if os.name == 'nt' and ('npx' in ser_conf["command"].lower() or
+                                    any('npx' in str(arg).lower() for arg in [ser_conf["command"]] + ser_conf["args"])):
+                use_shell = True
+            
             process = subprocess.Popen(
                 [ser_conf["command"]] + ser_conf["args"],
                 stdin=subprocess.PIPE,
@@ -46,11 +52,11 @@ class MCPServerManager:
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
-                encoding='utf-8'                
+                encoding='utf-8',
+                shell=use_shell          
             )
             self.processes[ser_name] = process
             
-            # 创建队列和停止事件
             self.output_queues[ser_name] = queue.Queue()
             self.stop_events[ser_name] = threading.Event()
             
@@ -77,7 +83,7 @@ class MCPServerManager:
             self.read_threads[ser_name] = thread
             
             print(f"[Info] 启动 {ser_name} 成功")
-            time.sleep(1)  # 给服务器启动时间
+            time.sleep(1)
             
             return process
         except Exception as e:
@@ -92,7 +98,7 @@ class MCPServerManager:
         process = self.processes[ser_name]
         
         try:
-            # send request with ONE newline
+            # send request with one newline
             req_json = json.dumps(req)
             process.stdin.write(req_json + '\n')
             process.stdin.flush()
@@ -133,12 +139,12 @@ class MCPServerManager:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2024-11-05",  # 固定版本
+                "protocolVersion": "2025-01-05",
                 "clientInfo": {
                     "name": "mcp-client",
                     "version": "1.0.0"
                 },
-                "capabilities": {}  # 添加空的能力对象
+                "capabilities": {}
             }
         }
         
@@ -148,7 +154,7 @@ class MCPServerManager:
         if resp and 'result' in resp:
             print(f"[Debug] 初始化成功")
             
-            # 发送initialized通知（这是通知，没有id）
+            # 发送initialized通知
             init_notif = {
                 "jsonrpc": "2.0",
                 "method": "notifications/initialized",
@@ -156,13 +162,11 @@ class MCPServerManager:
             }
             
             print(f"[Debug] 发送initialized通知...")
-            # 注意：通知没有响应，所以不要期待返回值
             self.send_mcp_req(ser_name, init_notif)
             
-            # 等待一下，让服务器处理通知
             time.sleep(0.5)
             
-            # 获取工具列表
+            # get工具列表
             tools_req = {
                 "jsonrpc": "2.0",
                 "id": 2,
@@ -200,10 +204,9 @@ class MCPServerManager:
         return {"error": "工具调用失败"}
     
     def stop(self):
-        # 停止所有服务器
         for ser_name, process in self.processes.items():
             if process:
-                # 设置停止标志
+                # 停止标志
                 if ser_name in self.stop_events:
                     self.stop_events[ser_name].set()
                 
@@ -231,7 +234,6 @@ def load_mcp_conf(path, manager):
         if manager.parse_config(conf):
             print(f"[Info] 正在加载MCP配置文件 {os.path.basename(path)}")
             
-            # 用于存储工具函数
             funcs = {}
             
             for ser_name in manager.servers.keys():

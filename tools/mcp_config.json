@@ -1,11 +1,12 @@
 {
   "mcpServers": {
-    "time": {
-      "command": "uvx",
+    "howtocook-mcp": {
+      "command": "npx",
       "args": [
-        "mcp-server-time",
-        "--local-timezone=Asia/Shanghai"
+        "-y",
+        "howtocook-mcp"
       ]
     }
   }
 }
+
