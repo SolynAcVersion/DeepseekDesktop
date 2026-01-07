@@ -13,7 +13,7 @@
 
 
 ## 目前功能
-- 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，这里默认是 `mcp-server-time` 。
+- 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，支持 `npx` , `uvx` ，这里默认是 `howtocook-mcp` 。
 - 允许输入本地MCP脚本文件，如操作文件、网络爬虫，这里提供了简单的操作文件实例工具 `tools\files.py` 和 `tools\network.py` 用来简单的agent功能。
 - 允许在启动时输入自定义 System Prompt 系统提示词。
 - 允许启动时自定义 Temperature 温度值。
@@ -21,7 +21,7 @@
 
 
 ## 下一步计划
-- 多内置一些好用的本地 MCP 之类 Function Calling 包，让 “Agent” 开箱即用
+- 优化 MCP Server 工具提示词
 - 支持多 MCP Server 链接服务
 - 增加本地历史储存功能
 - 零 AI 基础人群友好的 GUI 界面
