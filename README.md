@@ -15,14 +15,14 @@
 
 ## 目前功能
 - 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，支持 `npx` , `uvx` ，这里默认是 `howtocook-mcp` 。
-- 允许输入本地MCP脚本文件，如操作文件、网络爬虫、pdf文件 OCR 识别，这里提供了简单的操作文件实例工具 `tools\ocr.py` `tools\files.py` 和 `tools\network.py` 用来简单的agent功能。
+- 允许输入本地MCP脚本文件，如操作文件、网络爬虫、pdf文件，这里提供了简单的操作工具 `tools\files.py` 和 `tools\network.py` 用来简单的agent功能。
 - 允许在启动时输入自定义 System Prompt 系统提示词。
 - 允许启动时自定义 Temperature 温度值。
 - 较大操作链实施时，在有循环深度限制下，根据前一步的报错改正重试。最大操作循环深度，由 `MAX_ITER` 决定。
+- 内置 `tools\ocr.py` 文档识别。
 
 
 ## 下一步计划
-- 优化 MCP Server 工具提示词
 - 支持多 MCP Server 链接服务
 - 增加本地历史储存功能
 - 零 AI 基础人群友好的 GUI 界面
