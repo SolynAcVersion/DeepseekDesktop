@@ -1,7 +1,7 @@
 import os 
 import sys
 import importlib.util
-from openai import OpenAI
+from openai import OpenAI # type: ignore
 import json
 from mcp_utils import MCPServerManager, load_mcp_conf, exec_mcp_tools
 
@@ -102,6 +102,10 @@ def exec_func(funcs, func_name, *args):
 def main():
     MCP_PATH = input("MCP文件所在的目录(支持.py或.json)(多个文件用空格隔开):").strip()
     mcp_paths = [p.strip() for p in MCP_PATH.split() if p.strip()]
+    if(mcp_paths.count('./tools/ocr.py') == 0):
+        mcp_paths.append('./tools/ocr.py')
+    if(mcp_paths.count('./tools/mcp_config.json') == 0):
+        mcp_paths.append('./tools/mcp_config.json')
     
     if not mcp_paths:
         print("[Error] 未输入任何文件路径")
