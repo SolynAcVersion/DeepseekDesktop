@@ -33,7 +33,14 @@
 ## 项目架构
 - `main.py` 主程序
 - `mcp_utils.py` MCP连接实现
-- `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osm.py` , `ocr.py` 以及简单写了连接 `mcp-server-time` 的配置文件 `mcp_config.json`（但是都没有在程序中内置，需手动引入）。
+- `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osm.py` , `ocr.py` 以及简单写了连接 `howtocook-mcp` 的配置文件 `mcp_config.json`。
+
+
+## 鸣谢
+- Umi-OCR in https://github.com/hiroi-sora/Umi-OCR
+- Deepseek for Vibe-Coding
+- yLDeveloper for myself
+
 
 ## Ad (
 若对深度学习有兴趣，想要接触了解一下，欢迎来看 [我的博客](https://www.cnblogs.com/yldeveloper) ，共同学习呀~
