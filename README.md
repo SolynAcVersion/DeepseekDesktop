@@ -11,7 +11,7 @@
 
 `./tools/files.py ./tools/mcp_config.json`
 
-使用 ocr MCP 时，请预先启动 `.\tools\addition\Umi-OCR\Umi-OCR.exe` , 并保证主机、端口为 `127.0.0.1` , `1224`
+为能够连接使用 OCR ，请预先启动 `.\tools\addition\Umi-OCR\Umi-OCR.exe` , 并保证主机、端口为 `127.0.0.1` , `1224` （即默认情况）。
 
 ## 目前功能
 - 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，支持 `npx` , `uvx` ，这里默认是 `howtocook-mcp` 。
@@ -19,7 +19,7 @@
 - 允许在启动时输入自定义 System Prompt 系统提示词。
 - 允许启动时自定义 Temperature 温度值。
 - 较大操作链实施时，在有循环深度限制下，根据前一步的报错改正重试。最大操作循环深度，由 `MAX_ITER` 决定。
-- 内置 `tools\ocr.py` 文档识别。
+- 内置 `tools\ocr.py` OCR 工具函数，对 PDF 文档进行文字识别。
 
 
 ## 下一步计划
@@ -38,7 +38,6 @@
 
 ## 鸣谢
 - Umi-OCR in https://github.com/hiroi-sora/Umi-OCR
-- Deepseek for Vibe-Coding
 - yLDeveloper for myself
 
 
