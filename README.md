@@ -23,9 +23,10 @@
 
 
 ## 下一步计划
-- 支持多 MCP Server 链接服务
 - 增加本地历史储存功能
+- 添加 RAG
 - 零 AI 基础人群友好的 GUI 界面
+- 支持多 MCP Server 链接服务
 - 优化 token 使用
 - i18n
 
