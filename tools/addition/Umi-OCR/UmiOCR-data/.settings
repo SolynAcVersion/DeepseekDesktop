@@ -29,5 +29,18 @@ ocr.win7_x64_RapidOCR-json.numThread=8
 
 [TabPageManager]
 showPageIndex=0
-refresh=true
-openPageList=@Variant(\0\0\0\t\0\0\0\x1\0\0\0\n\0\0\0N\0G\0l\0o\0\x62\0\x61\0l\0\x43\0o\0n\0\x66\0i\0g\0s\0P\0\x61\0g\0\x65\0/\0G\0l\0o\0\x62\0\x61\0l\0\x43\0o\0n\0\x66\0i\0g\0s\0P\0\x61\0g\0\x65\0.\0q\0m\0l)
+refresh=false
+openPageList=GlobalConfigsPage/GlobalConfigsPage.qml, ScreenshotOCR/ScreenshotOCR.qml
+
+[ScreenshotOCR]
+configs_advanced=false
+ocr.angle=false
+ocr.language=\x7b80\x4f53\x4e2d\x6587
+ocr.maxSideLen=1024
+tbpu.parser=multi_para
+hotkey.screenshot=win+alt+c
+hotkey.paste=win+alt+v
+hotkey.reScreenshot=
+action.copy=false
+action.popMainWindow=true
+other.simpleNotificationType=default

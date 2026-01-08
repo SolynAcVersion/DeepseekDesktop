@@ -15,11 +15,11 @@
 
 ## 目前功能
 - 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，支持 `npx` , `uvx` ，这里默认是 `howtocook-mcp` 。
-- 允许输入本地MCP脚本文件，如操作文件、网络爬虫、pdf文件，这里提供了简单的操作工具 `tools\files.py` 和 `tools\network.py` 用来简单的agent功能。
+- 允许输入本地MCP脚本文件，如操作文件、网络爬虫等，这里提供了简单的操作工具 `tools\files.py` 和 `tools\network.py` 用来简单的agent功能。
 - 允许在启动时输入自定义 System Prompt 系统提示词。
 - 允许启动时自定义 Temperature 温度值。
 - 较大操作链实施时，在有循环深度限制下，根据前一步的报错改正重试。最大操作循环深度，由 `MAX_ITER` 决定。
-- 内置 `tools\ocr.py` OCR 工具函数，对 PDF 文档进行文字识别。
+- 内置 `tools\ocr.py` OCR 工具函数，对图片, PDF 文档进行文字识别。
 
 
 ## 下一步计划
@@ -33,12 +33,11 @@
 ## 项目架构
 - `main.py` 主程序
 - `mcp_utils.py` MCP连接实现
-- `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osm.py` , `ocr.py` 以及简单写了连接 `howtocook-mcp` 的配置文件 `mcp_config.json`。
+- `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osmanager.py` , `ocr.py` 以及简单写了连接 `howtocook-mcp` 的配置文件 `mcp_config.json`。
 
 
 ## 鸣谢
 - Umi-OCR in https://github.com/hiroi-sora/Umi-OCR
-- yLDeveloper for myself
 
 
 ## Ad (

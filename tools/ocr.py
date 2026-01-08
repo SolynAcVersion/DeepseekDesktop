@@ -1,5 +1,6 @@
 # 改编自 https://github.com/hiroi-sora/Umi-OCR/blob/main/docs/http/api_doc.md#/api/doc
 
+import base64
 import os
 import json
 import time
@@ -20,7 +21,7 @@ def ocr_process_pdf(file_path: str, download_dir: str):
         
     Returns:
         str: 下载成功的文件保存路径，包括文件名和拓展名，是相对路径。
-
+        
     Raises:
         Exception: 服务器连接失败
     """
@@ -78,7 +79,7 @@ def ocr_process_pdf(file_path: str, download_dir: str):
         {
             "id": id,
             "is_data": True,
-            "format": "text",
+            "format": "dict",
             "is_unread": True,
         }
     )
@@ -144,3 +145,43 @@ def ocr_process_pdf(file_path: str, download_dir: str):
 
 
     
+def ocr_process_pictures(file_path: str):
+    
+    """
+    将本地图片文件识别文本，输出识别到的内容
+    
+    Args:
+        file_path: 要上传的图像文件目录       
+        
+        如果有“\\”符号，必须使用转义符号！！！
+        "C:\\Users\\admin\\Desktop\\new.png"是正确的
+        
+    Returns:
+        str: 识别出来的内容
+        由多个小json组成，每个json中的参数有：
+        text	string	文本
+        score	double	置信度 (0~1)
+        box	    list	文本框顺时针四个角的xy坐标：[左上,右上,右下,左下]
+        end	    string	表示本行文字结尾的结束符，根据排版解析得出。可能为空、空格 、换行\\n。
+        将所有OCR文本块拼接为完整段落时，按照 本行文字+本行结束符+下一行文字+下一行结束符+……的形式，就能恢复段落结构。
+    """
+    
+    with open(file_path,'rb') as f:
+        image_base64 = base64.b64encode(f.read())
+        _, image_base64, _ = str(image_base64).split('\'')
+    url = "http://127.0.0.1:1224/api/ocr"
+    data = {
+        "base64": str(image_base64),
+        "options": {
+            "data.format": "dict",
+        }
+    }
+    headers = {"Content-Type": "application/json"}
+    data_str = json.dumps(data)
+    response = requests.post(url, data=data_str, headers=headers)
+    response.raise_for_status()
+    res_dict = json.loads(response.text)
+    return res_dict["data"]
+    
+# if __name__ == "__main__":
+#     ocr_process_pictures("C:\\Users\\2300\\Desktop\\mcpPro\\DeepseekDesktop\\tools\\addition\\Umi-OCR\\test.png")
