@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "openai>=2.14.0",
+    "pyside6>=6.10.1",
     "requests>=2.32.5",
 ]
