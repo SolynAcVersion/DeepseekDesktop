@@ -3,7 +3,23 @@
 ## 使用说明
 1.命令行使用:
 
-使用 uv 启动 `main.py` (cpy=3.10.0) ， 根据操作进行
+先安装依赖库
+
+```bash
+uv sync
+```
+
+使用 uv 启动 `main.py` (cpy=3.10.0) 
+
+```bash
+uv run python ./main.py
+```
+
+若还没有 uv , 请先安装
+
+```bash
+pip install uv
+```
 
 程序读取 Deepseek API KEY 时通过 手动输入 、 读取系统环境变量 `DEEPSEEK_API_KEY` 两种方式
 
@@ -12,6 +28,14 @@
 建议使用局部路径，如
 
 `./tools/files.py ./tools/mcp_config.json`
+
+2.UI界面使用:
+
+使用 uv 启动 `gui.py` (cpy=3.10.0) 
+
+```bash
+uv run python ./gui.py
+```
 
 
 
