@@ -5,10 +5,6 @@
 
 使用 uv 启动 `main.py` (cpy=3.10.0) ， 根据操作进行
 
-2.GUI界面:
-
-使用 `gui.py`，版本同上
-
 程序读取 Deepseek API KEY 时通过 手动输入 、 读取系统环境变量 `DEEPSEEK_API_KEY` 两种方式
 
 读取 MCP 文件时支持 `.py` , `.json` 文件输入，支持多文件输入（不同文件中间用空格分开）。
@@ -16,6 +12,8 @@
 建议使用局部路径，如
 
 `./tools/files.py ./tools/mcp_config.json`
+
+
 
 为能够连接使用 OCR ，请预先启动 `.\tools\addition\Umi-OCR\Umi-OCR.exe` , 并保证主机、端口为 `127.0.0.1` , `1224` （即默认情况）。
 
@@ -28,9 +26,12 @@
 - 内置 `tools\ocr.py` OCR 工具函数，对图片, PDF 文档进行文字识别。
 
 
-## 下一步计划
+## 正在更新
 - 零 AI 基础人群友好的 GUI 界面
 - 增加本地历史储存功能
+
+
+## 下一步计划
 - 添加 RAG
 - 支持多 MCP Server 链接服务
 - 优化 token 使用
@@ -43,6 +44,7 @@
 - `gui.py` UI界面实现(使用PySide6)
 - `mcp_utils.py` MCP连接实现
 - `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osmanager.py` , `ocr.py` 以及简单写了连接 `howtocook-mcp` 的配置文件 `mcp_config.json`。
+- `uv.lock` Python 依赖库
 
 
 ## 鸣谢
