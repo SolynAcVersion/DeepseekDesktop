@@ -1,7 +1,13 @@
 # DeepseekDesktop
 
 ## 使用说明
+1.命令行使用:
+
 使用 uv 启动 `main.py` (cpy=3.10.0) ， 根据操作进行
+
+2.GUI界面:
+
+使用 `gui.py`，版本同上
 
 程序读取 Deepseek API KEY 时通过 手动输入 、 读取系统环境变量 `DEEPSEEK_API_KEY` 两种方式
 
@@ -32,13 +38,16 @@
 
 
 ## 项目架构
-- `main.py` 主程序
+- `main.py` 命令行主程序(暂时停更)
+- `aiclass.py` 对原命令行主程序封装得到的类(持续更新)
+- `gui.py` UI界面实现(使用PySide6)
 - `mcp_utils.py` MCP连接实现
 - `tools` 包含额外的本地MCP服务 `files.py` , `network.py` , `osmanager.py` , `ocr.py` 以及简单写了连接 `howtocook-mcp` 的配置文件 `mcp_config.json`。
 
 
 ## 鸣谢
 - Umi-OCR in https://github.com/hiroi-sora/Umi-OCR
+- PySide 界面原型 in https://zhuanlan.zhihu.com/p/1906002163316028282
 
 
 ## Ad (
