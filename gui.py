@@ -2,27 +2,86 @@ import sys
 import os
 import pickle
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QPushButton, QScrollArea, QFrame, QSizePolicy
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QPushButton, QScrollArea, QFrame, QSizePolicy, QGridLayout, QLineEdit, QFileDialog,\
+        QMainWindow
 )
-from PySide6.QtGui import  QFont, QFontMetrics,QPixmap, QDragEnterEvent, QDropEvent,QIcon
+from PySide6.QtGui import  QFont, QFontMetrics,QPixmap, QDragEnterEvent, QDropEvent,QIcon, QAction
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QSplitter, QListWidget, QListWidgetItem, QWidget, QLabel
 from PySide6.QtCore import QMimeData, QSize
 
 from aiclass import AI
 
+class Init_Dialog(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Deepseek Desktop")
+        self.resize(400, 150)
+        widget = QWidget()
+        layout = QGridLayout(widget)
+        
+        label1 = QLabel("API Key :")
+        label2 = QLabel("MCP Files :")
+        
+        button1 = QPushButton("Select MCP Files")
+        button2 = QPushButton("Done")
+        
+        self.line_edit1 = QLineEdit()
+        self.line_edit1.setPlaceholderText("sk-xxxxxx...")
+        
+        
+        layout.addWidget(label1, 0, 0)
+        layout.addWidget(self.line_edit1, 0, 1)
+        layout.addWidget(label2, 1, 0)
+        layout.addWidget(button1, 1, 1)
+        layout.addWidget(button2, 2, 1)
+        button1.clicked.connect(self.read_mcp_files)
+        
+        self.DS_API_KEY = ""
+        self.mcp_files = []
+        
+        layout.setSpacing(10)
+        #layout.setAlignment(button1, Qt.AlignTop | Qt.AlignLeft)
+        layout.setRowStretch(0, 1)
+        layout.setColumnStretch(1, 1)
+        self.setLayout(layout)
+        
+        button2.clicked.connect(self.close_wid)
+    
+    def close_wid(self):
+        self.DS_API_KEY = self.line_edit1.text()
+        self.close()
+    
+    def read_mcp_files(self):
+        file_dialog = QFileDialog(self)
+        file_dialog.setWindowTitle("Choose MCP Files")
+        file_dialog.setFileMode(QFileDialog.ExistingFile)
+        selected_files, _ = file_dialog.getOpenFileNames(self, "Open File", "", "Python Files (*.py);;JSON Files (*.json)")
+        if selected_files:
+            self.mcp_files = selected_files
+            print(f"Selected MCP file: {selected_files}")
 
 
 class ChatBox(QWidget):
     def __init__(self):
         super().__init__()
+        self.init_dialog = None
+        
         self.current_chat_target = "Chat A"  # 当前聊天对象标识，默认设置为"好友A"
         self.history_path = "chathistory"  # 历史记录文件夹
         os.makedirs(self.history_path, exist_ok=True)  # 创建历史记录文件夹
         self.chat_records = {}   # 聊天记录存储：{对象标识: [消息列表]}
         self.initUI()
         self.load_chat_history()  # 加载聊天历史
-
+        
+        
+        
+    def show_init_dialog(self):
+        if self.init_dialog is None:
+            self.init_dialog = Init_Dialog()
+        self.init_dialog.show()    
+        
+        
     def initUI(self):
         self.setWindowTitle('Deepseek Desktop')
         self.setGeometry(100, 100, 1000, 600)  # 扩大窗口初始尺寸
@@ -71,13 +130,18 @@ class ChatBox(QWidget):
         self.input_box.setAcceptDrops(True)  # 开启拖拽功能
 
         # 创建按钮布局（将按钮放在右下角）
-        button_layout = QHBoxLayout()
+        button_layout = QGridLayout()
         self.send_button = QPushButton('发送')
         self.send_button.setShortcut('ctrl+return')
         self.send_button.clicked.connect(self.send_message)
+        
+        self.init_but = QPushButton('设置初始值')
+        self.init_but.clicked.connect(self.show_init_dialog)
+        
         # self.reply_button = QPushButton('好友回复')
         # self.reply_button.clicked.connect(self.send_friend_message)
-        button_layout.addWidget(self.send_button)
+        button_layout.addWidget(self.send_button, 0, 1)
+        button_layout.addWidget(self.init_but, 0, 0)
         # button_layout.addWidget(self.reply_button)
 
         # 添加到垂直布局中
