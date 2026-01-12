@@ -374,6 +374,10 @@ class AI:
     def update_system_prompt(self, new_prompt):
         self.system_prompt = new_prompt
         self.reset_conversation()
+    
+    # update temperature
+    def update_temperature(self, new_temp):
+        self.temperature= new_temp
 
 
 # an instance of console using AI class

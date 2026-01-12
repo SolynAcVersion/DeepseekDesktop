@@ -29,7 +29,7 @@ ocr.win7_x64_RapidOCR-json.numThread=8
 
 [TabPageManager]
 showPageIndex=1
-refresh=true
+refresh=false
 openPageList=GlobalConfigsPage/GlobalConfigsPage.qml, ScreenshotOCR/ScreenshotOCR.qml
 
 [ScreenshotOCR]

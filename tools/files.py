@@ -72,6 +72,9 @@ def write_to_file(text: str, filepath: str, mode: int) -> str:
     
     Args:
         text: 要写入的文本
+        text不支持转义符！
+        允许有回车存在
+        
         filepath: 文件路径，如果为None则直接返回文本
         mode: 写入模式，0为追加写入，1为覆盖写入
         

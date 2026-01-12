@@ -1,12 +1,13 @@
 import sys
 import os
+import threading
 import pickle
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QPushButton, QScrollArea, QFrame, QSizePolicy, QGridLayout, QLineEdit, QFileDialog,\
-        QMainWindow, QSlider
+        QMainWindow, QSlider, QProgressDialog
 )
 from PySide6.QtGui import  QFont, QFontMetrics,QPixmap, QDragEnterEvent, QDropEvent,QIcon, QAction
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, QThread
 from PySide6.QtWidgets import QSplitter, QListWidget, QListWidgetItem, QWidget, QLabel
 from PySide6.QtCore import QMimeData, QSize
 
@@ -44,6 +45,8 @@ class Init_Dialog(QWidget):
         # elements in widget
         api_key_label = QLabel("API Key :")
         mcp_files_label = QLabel("MCP Files :")
+        self.mcp_files_display = QLabel("")
+        self.mcp_files_display.setWordWrap(True)
         
         select_files_button = QPushButton("Select MCP Files")
         done_button = QPushButton("Done")
@@ -57,7 +60,8 @@ class Init_Dialog(QWidget):
         layout.addWidget(self.api_key_line_edit, 0, 1)
         layout.addWidget(mcp_files_label, 1, 0)
         layout.addWidget(select_files_button, 1, 1)
-        layout.addWidget(done_button, 2, 1)
+        layout.addWidget(self.mcp_files_display)
+        layout.addWidget(done_button)
         
         layout.setSpacing(10)
         #layout.setAlignment(button1, Qt.AlignTop | Qt.AlignLeft)
@@ -90,7 +94,8 @@ class Init_Dialog(QWidget):
         selected_files, _ = file_dialog.getOpenFileNames(self, "Open File", "", "Python Files (*.py);;JSON Files (*.json)")
         if selected_files:
             self.mcp_files = selected_files
-            print(f"Selected MCP file: {selected_files}")
+            self.mcp_files_display.setText(f"Selected Files : {selected_files}")
+            print(f"Selected MCP files: {selected_files}")
 
 
 # window for settings during chats
@@ -108,7 +113,7 @@ class settings(QWidget):
     def __init__(self, sys_prompt_ori: str, temperature_ori: int):
         super().__init__()
         self.setWindowTitle("Chat Settings")
-        self.resize(400, 150)
+        self.resize(300, 400)
         widget = QWidget()
         layout = QGridLayout(widget)
         
@@ -158,6 +163,24 @@ class settings(QWidget):
         self.close()
 
 
+# multi-threading class
+# done by vibe-coding, no explainations
+class AIThread(QThread):
+    finished = Signal(str)
+    error = Signal(str)
+    
+    def __init__(self, ai_instance, message):
+        super().__init__()
+        self.ai_instance = ai_instance
+        self.message = message
+        
+    def run(self):
+        try:
+            response, _ = self.ai_instance.process_user_inp(self.message)
+            if response:
+                self.finished.emit(response)
+        except Exception as e:
+            self.error.emit(str(e))
 
 # main body of GUI, the window for chat
 
@@ -180,6 +203,7 @@ class ChatBox(QWidget):
         self.mcp_files = []
         self.system_prompt = ""
         self.temperature = 10
+        self.ai = None
         
         # current chat
         self.current_chat_target = "Chat A"
@@ -216,18 +240,40 @@ class ChatBox(QWidget):
         self.DS_API_KEY = api_key
         self.mcp_files = mcp_files
         
-        # check if API_KEY provided
-        # (if provided) hide button for initialization, show button for real chats
-        if self.DS_API_KEY:
+        if not self.DS_API_KEY:
+            self.DS_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+            
+        if (self.DS_API_KEY and self.DS_API_KEY.startswith("sk-")):
             self.init_but.setVisible(False)
             self.send_button.setVisible(True)
             self.settings_but.setVisible(True)
+            
+            # uncertain progress dialog
+            self.progress_dialog = QProgressDialog("正在初始化 AI，请稍候...", "取消", 0, 0, self)
+            self.progress_dialog.setWindowTitle("初始化中")
+            self.progress_dialog.setWindowModality(Qt.WindowModal) # type: ignore
+            self.progress_dialog.setMinimumDuration(0)
+            self.progress_dialog.setRange(0, 0)
+            self.progress_dialog.show()
+            
+
+            try:
+                self.ai = AI(mcp_paths=self.mcp_files, api_key=api_key)
+                self.temperature = int(self.ai.temperature * 10)  # type: ignore
+                self.system_prompt = self.ai.system_prompt  # type: ignore
+                self.progress_dialog.close()
+            except Exception as e:
+                self.progress_dialog.close()
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "初始化错误", f"AI 初始化失败：{e}")
           
           
     # act func bounded to button "Settings" for opening the Setting window
     # proceed the args: {current_system_prompt: str, current_temperature: int} to the window
     # launch a new Setting window instance once called
     def open_settings(self, sys_prompt: str, temp: int):
+        self.temperature = int(self.ai.temperature * 10) # type: ignore
+        self.system_prompt = self.ai.system_prompt # type: ignore
         self.settings_wid = settings(sys_prompt, temp)
         
         # receive signal when "Save" button pressed and Settings window closed
@@ -235,13 +281,14 @@ class ChatBox(QWidget):
         self.settings_wid.sig_save_settings.connect(self.handle_settings_save)
         self.settings_wid.show()
         
+        
     # act when received signal above
     # bounded above
     def handle_settings_save(self, sys_prompt: str, temp : int):
         self.system_prompt = sys_prompt
         self.temperature = temp
-        print(temp)
-        print(sys_prompt)
+        self.ai.system_prompt = self.system_prompt # type: ignore
+        self.ai.temperature = float(self.temperature) / 10.0 # type: ignore
                 
         
     # main body for main window ( weired sentence
@@ -301,6 +348,7 @@ class ChatBox(QWidget):
         
         # the QTextEdit for input
         self.input_box_text_edit = QTextEdit()
+        self.input_box_text_edit.setAcceptRichText(False)
         self.input_box_text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         # enable drags for users to enlarge size of inpux box
         self.input_box_text_edit.setAcceptDrops(True) 
@@ -497,8 +545,19 @@ class ChatBox(QWidget):
             
             # clear the text_edit in the input area
             self.input_box_text_edit.clear()
+            self.send_button.setEnabled(False)
+            
+            self.ai_thread = AIThread(self.ai, message)
+            self.ai_thread.finished.connect(lambda: self.send_button.setEnabled(True))
+            self.ai_thread.finished.connect(self.reply_message)
+            self.ai_thread.start()
+                    
             return message
+        
+        
         return ''
+    
+            
 
     def reply_message(self, msg: str):
         """
@@ -529,7 +588,6 @@ class ChatBox(QWidget):
         args:
         - message: text you wanna render
         - is_sender: True / False whether the message comes from the user
-
         """
 
         # calculate the proper max width of massage bubble
@@ -571,41 +629,38 @@ class ChatBox(QWidget):
         content_label.setStyleSheet("background: transparent;")
         content_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        # adjust bubble's width to the length of text
+        # I AM A TAILOR FOR EVERY FONT !
         font = content_label.font()
         fm = QFontMetrics(font)
-        text_width = fm.horizontalAdvance(message)
         
-        # minimum width of 100pix, a sum of width of text and padding
-        bubble_width = max(100, min(text_width + 40, max_bubble_width)) 
+        # max text width = max bubble width - padding
+        max_text_width = max_bubble_width - 20
         
 
-        # minimun height of the bubble
-        text_lines = message.count('\n') + 1
+        text_rect = fm.boundingRect(0, 0, max_text_width, 0, Qt.TextWordWrap, message) # type: ignore
         
-        # minimum height of 40pix, a sum of height of text and padding
-        bubble_height = max(40, fm.lineSpacing() * text_lines + 20)
-
-
-        # adjust the height of bubbles manually
+        # calculating bubble width
+        bubble_width = max(100, min(text_rect.width() + 20, max_bubble_width))
+        
+        # calculating bubble height
+        bubble_height = max(40, text_rect.height() + 20)
+        
+        # bubble size settings
         content_widget.setFixedSize(bubble_width, bubble_height)
-        # cut the padding
+        
+        # max width = bubble_width - padding
         content_label.setMaximumWidth(bubble_width - 20)
-
 
         content_layout = QVBoxLayout(content_widget)
         content_layout.addWidget(content_label)
 
-
         message_layout.addWidget(content_widget)
         message_layout.setAlignment(Qt.AlignmentFlag.AlignRight if is_sender else Qt.AlignmentFlag.AlignLeft)
-
 
         self.chat_layout.addWidget(message_widget)
         self.chat_layout.addSpacing(10)
         
         # auto-scroll to the bottom
-        # func defined below
         self.scroll_to_bottom()
 
 
