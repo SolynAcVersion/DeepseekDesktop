@@ -1,3 +1,26 @@
+"""
+
+
+
+
+
+                ==============================
+                |                            |
+                |         WARNING!!!         |
+                |                            |
+                ==============================    
+
+                  this file has been abandoned
+                 Please switch to gui.py for UI
+or run aiclass.py, where a simple console instance is written in main()
+
+                    1/12/26   yLDeveloepr   
+    
+
+
+
+"""
+
 import os 
 import sys
 import importlib.util
@@ -220,6 +243,8 @@ def main():
     tools_desc = gen_tools_desc(funcs)
     if tools_desc:
         system_prompt = tools_desc + '\n' + system_prompt
+        print(tools_desc)
+        
     
     conv_his = [
         {"role": "system", "content": system_prompt}

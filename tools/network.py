@@ -337,7 +337,7 @@ def search_baidu(query: str, max_results: int = 5, timeout: float = 10.0) -> str
         encoded_query = urllib.parse.quote(query)
         
         # 构建百度搜索URL
-        search_url = f"https://www.baidu.com/s?wd={encoded_query}&rn={max_results}"
+        search_url = f"https://www.baidu.com/s?ie=UTF-8&wd={encoded_query}&rn={max_results}"
         
         # 调用read_page函数，传入超时参数
         search_results = read_page(search_url, timeout)
