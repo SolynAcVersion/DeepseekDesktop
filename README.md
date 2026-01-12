@@ -37,6 +37,7 @@ pip install uv
 uv run python ./gui.py
 ```
 
+【正在开发中】
 
 
 为能够连接使用 OCR ，请预先启动 `.\tools\addition\Umi-OCR\Umi-OCR.exe` , 并保证主机、端口为 `127.0.0.1` , `1224` （即默认情况）。
