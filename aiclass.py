@@ -228,7 +228,7 @@ class AI:
         
         for step in range(max_iter):
             try:
-                response = self.client.chat.completions.create(
+                response = self.client.chat.completions.create( # type: ignore
                     model="deepseek-chat",
                     temperature=self.temperature,
                     messages=self.conv_his, # type: ignore

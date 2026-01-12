@@ -3,17 +3,21 @@ import os
 import pickle
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QPushButton, QScrollArea, QFrame, QSizePolicy, QGridLayout, QLineEdit, QFileDialog,\
-        QMainWindow
+        QMainWindow, QSlider
 )
 from PySide6.QtGui import  QFont, QFontMetrics,QPixmap, QDragEnterEvent, QDropEvent,QIcon, QAction
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import QSplitter, QListWidget, QListWidgetItem, QWidget, QLabel
 from PySide6.QtCore import QMimeData, QSize
 
 from aiclass import AI
 
 class Init_Dialog(QWidget):
+    
+    sig_done = Signal(str, list)
+    
     def __init__(self):
+           
         super().__init__()
         self.setWindowTitle("Deepseek Desktop")
         self.resize(400, 150)
@@ -50,22 +54,80 @@ class Init_Dialog(QWidget):
     
     def close_wid(self):
         self.DS_API_KEY = self.line_edit1.text()
+        self.sig_done.emit(self.DS_API_KEY, self.mcp_files)
         self.close()
     
     def read_mcp_files(self):
         file_dialog = QFileDialog(self)
         file_dialog.setWindowTitle("Choose MCP Files")
-        file_dialog.setFileMode(QFileDialog.ExistingFile)
+        file_dialog.setFileMode(QFileDialog.ExistingFile) # type: ignore
         selected_files, _ = file_dialog.getOpenFileNames(self, "Open File", "", "Python Files (*.py);;JSON Files (*.json)")
         if selected_files:
             self.mcp_files = selected_files
             print(f"Selected MCP file: {selected_files}")
+
+class settings(QWidget):
+    
+    #  system_prompt, temperature
+    
+    sig_save_settings = Signal(str, int)
+    def __init__(self, sys_prompt_ori: str, temperature_ori: int):
+        super().__init__()
+        self.setWindowTitle("Chat Settings")
+        self.resize(400, 150)
+        widget = QWidget()
+        layout = QGridLayout(widget)
+        
+        label1 = QLabel("System Prompt :")
+        label2 = QLabel("Temperature :")
+        label3 = QLabel(str(float(temperature_ori) / 10.0))
+        label3.setAlignment(Qt.AlignCenter) # type: ignore
+        
+        button2 = QPushButton("Done")
+        
+        self.sys_prompt_edit = QTextEdit()
+        self.sys_prompt_edit.setText(sys_prompt_ori)
+        
+        self.temp_slider = QSlider(Qt.Horizontal) # type: ignore
+        
+        # 10倍的temperature
+        self.temp_slider.setRange(0, 15)
+        self.temp_slider.setSingleStep(1)
+        self.temp_slider.setValue(temperature_ori)
+        
+        self.temp_slider.valueChanged.connect(lambda val: label3.setText(str(float(val) / 10.0)))
+           
+        layout.addWidget(label1, 0, 0)
+        layout.addWidget(self.sys_prompt_edit)
+        layout.addWidget(label2)
+        layout.addWidget(self.temp_slider)
+        layout.addWidget(label3)
+        layout.addWidget(button2)
+        
+        button2.clicked.connect(self.close_wid)
+        
+        layout.setSpacing(10)
+        #layout.setAlignment(button1, Qt.AlignTop | Qt.AlignLeft)
+        layout.setRowStretch(0, 1)
+        layout.setColumnStretch(1, 1)
+        self.setLayout(layout)
+        
+    def close_wid(self):
+        self.system_prompt = self.sys_prompt_edit.toPlainText()
+        self.sig_save_settings.emit(self.sys_prompt_edit.toPlainText(), self.temp_slider.value())
+        self.close()
 
 
 class ChatBox(QWidget):
     def __init__(self):
         super().__init__()
         self.init_dialog = None
+        
+        self.DS_API_KEY = ""
+        self.mcp_files = []
+        
+        self.system_prompt = ""
+        self.temperature = 10
         
         self.current_chat_target = "Chat A"  # 当前聊天对象标识，默认设置为"好友A"
         self.history_path = "chathistory"  # 历史记录文件夹
@@ -79,7 +141,29 @@ class ChatBox(QWidget):
     def show_init_dialog(self):
         if self.init_dialog is None:
             self.init_dialog = Init_Dialog()
-        self.init_dialog.show()    
+            self.init_dialog.sig_done.connect(self.handle_init_done)
+        self.init_dialog.show()  
+        
+    def handle_init_done(self, api_key: str, mcp_files: list):
+        self.DS_API_KEY = api_key
+        self.mcp_files = mcp_files
+        
+        if self.DS_API_KEY:        
+            self.init_but.setVisible(False)
+            self.send_button.setVisible(True)
+            self.settings_but.setVisible(True)
+          
+    def open_settings(self, sys_prompt: str, temp: int):
+        self.settings_wid = settings(sys_prompt, temp)
+        self.settings_wid.sig_save_settings.connect(self.handle_settings_save)
+        self.settings_wid.show()
+        
+    def handle_settings_save(self, sys_prompt: str, temp : int):
+        self.system_prompt = sys_prompt
+        self.temperature = temp
+        print(temp)
+        print(sys_prompt)
+                
         
         
     def initUI(self):
@@ -95,7 +179,7 @@ class ChatBox(QWidget):
             print(f"无法加载窗口logo: {logo_path}")
 
         # 主布局改为左右分栏
-        main_splitter = QSplitter(Qt.Horizontal)
+        main_splitter = QSplitter(Qt.Horizontal) # type: ignore
         
         # 左侧聊天对象列表（移除固定宽度限制，允许拖动调整）
         self.contact_list = QListWidget()
@@ -111,7 +195,7 @@ class ChatBox(QWidget):
         right_layout = QVBoxLayout(right_container)
 
         # 新增垂直分栏用于聊天显示区和输入区的高度调整
-        chat_splitter = QSplitter(Qt.Vertical)
+        chat_splitter = QSplitter(Qt.Vertical) # type: ignore
 
         # 滚动区域（原聊天记录区域）
         self.scroll_area = QScrollArea()
@@ -135,13 +219,29 @@ class ChatBox(QWidget):
         self.send_button.setShortcut('ctrl+return')
         self.send_button.clicked.connect(self.send_message)
         
+        self.settings_but = QPushButton('设置')
+        self.settings_but.clicked.connect(lambda: self.open_settings(self.system_prompt, self.temperature))
+        
         self.init_but = QPushButton('设置初始值')
         self.init_but.clicked.connect(self.show_init_dialog)
+        
+        if self.DS_API_KEY:
+            self.init_but.setVisible(False)
+            self.send_button.setVisible(True)
+            self.settings_but.setVisible(True)
+        else:
+            self.init_but.setVisible(True)
+            self.send_button.setVisible(False)
+            self.settings_but.setVisible(False)
+    
         
         # self.reply_button = QPushButton('好友回复')
         # self.reply_button.clicked.connect(self.send_friend_message)
         button_layout.addWidget(self.send_button, 0, 1)
-        button_layout.addWidget(self.init_but, 0, 0)
+        button_layout.addWidget(self.init_but, 0, 1)
+        button_layout.addWidget(self.settings_but, 0, 0)
+        
+        
         # button_layout.addWidget(self.reply_button)
 
         # 添加到垂直布局中
@@ -173,6 +273,9 @@ class ChatBox(QWidget):
 
         # 初始化好友A的聊天记录
         self.switch_chat_target(QListWidgetItem("Chat 1"))
+
+
+        
 
     def add_contact_item(self, name: str):
         """添加聊天对象条目"""
@@ -333,7 +436,7 @@ class ChatBox(QWidget):
                 self.send_message(file_path=file_path)
 
     def scroll_to_bottom(self):
-        scroll_bar = self.findChild(QScrollArea).verticalScrollBar()
+        scroll_bar = self.findChild(QScrollArea).verticalScrollBar() # type: ignore
         QTimer.singleShot(100, lambda: scroll_bar.setValue(scroll_bar.maximum()))
 
     def closeEvent(self, event):
