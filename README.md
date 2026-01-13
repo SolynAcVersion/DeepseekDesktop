@@ -1,5 +1,9 @@
 # DeepseekDesktop
 
+
+A Community Driven Agent
+
+
 ## 使用说明
 
 1.UI界面使用（最建议）:
@@ -52,8 +56,7 @@ pip install uv
 ## 目前功能
 - 可调用线上 MCP Server，如 `MCP.so` 仓库上的服务器，只用改 `tools\mcp_config.json` 中的内容，支持 `npx` , `uvx` ，这里默认是 `howtocook-mcp` 。注：`tools\mcp_config.json` 中只能添加一个 MCP Server
 - 允许输入本地MCP脚本文件，如操作文件、网络爬虫等，这里提供了简单的操作工具 `tools\files.py` 和 `tools\network.py` 等用来简单的agent功能。
-- 允许在启动时输入自定义 System Prompt 系统提示词。
-- 允许启动时自定义 Temperature 温度值。
+- 允许自定义 System Prompt 系统提示词、Temperature 温度值。
 - 较大操作链实施时，在有循环深度限制下，根据前一步的报错改正重试。最大操作循环深度，由 `MAX_ITER` 决定。
 - 内置 `tools\ocr.py` OCR 工具函数，对图片, PDF 文档进行文字识别。
 - 完备的注释系统，方便维护、查阅。
@@ -61,10 +64,12 @@ pip install uv
 
 
 ## 正在更新
-- 零 AI 基础人群友好的 GUI 界面 #3
+- 零 AI 基础人群友好的 GUI 界面 #4
+- 提供更好的接口
+- 高度自由化
+- 社区模块开发友好
 - 增加本地历史储存功能 #2
 - i18n
-- 完备的注释系统，极大可读性可维护性 #2
 
 ## 下一步计划
 - 添加 RAG
