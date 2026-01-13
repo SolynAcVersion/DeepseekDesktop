@@ -24,7 +24,7 @@ or run aiclass.py, where a simple console instance is written in main()
 import os 
 import sys
 import importlib.util
-from openai import OpenAI # type: ignore
+from openai import OpenAI  
 import json
 from mcp_utils import MCPServerManager, load_mcp_conf, exec_mcp_tools
 
@@ -64,7 +64,7 @@ def load_mcp_mod(mcp_path):
                 raise ImportError(f"[Warning] 无法从 {mcp_path} 加载模块")
             mcp_module = importlib.util.module_from_spec(spec)
             sys.modules[module_name] = mcp_module
-            spec.loader.exec_module(mcp_module) # type: ignore
+            spec.loader.exec_module(mcp_module)  
             print(f"[Info] 加载 {module_name} 成功")
             funcs = {}
             for attr_name in dir(mcp_module):
@@ -280,9 +280,9 @@ def main():
                 response = client.chat.completions.create(
                     model="deepseek-chat",
                     temperature=TEMPERATURE,
-                    messages=conv_his, # type: ignore
+                    messages=conv_his,  
                     stream=False
-                ) # type: ignore
+                )  
                 get_reply = response.choices[0].message.content
                 if get_reply.startswith("EXECUTE:"):
                     print(f"\n[步骤 {step + 1} ][AI 请求执行] {get_reply}")

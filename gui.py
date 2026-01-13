@@ -51,6 +51,9 @@ class Init_Dialog(QWidget):
         select_files_button = QPushButton("Select MCP Files")
         done_button = QPushButton("Done")
         
+        
+        done_button.setShortcut('return')
+        
         self.api_key_line_edit = QLineEdit()
         self.api_key_line_edit.setPlaceholderText("sk-xxxxxx...")
         
@@ -90,7 +93,7 @@ class Init_Dialog(QWidget):
     def read_mcp_files(self):
         file_dialog = QFileDialog(self)
         file_dialog.setWindowTitle("Choose MCP Files")
-        file_dialog.setFileMode(QFileDialog.ExistingFile) # type: ignore
+        file_dialog.setFileMode(QFileDialog.ExistingFile)  
         selected_files, _ = file_dialog.getOpenFileNames(self, "Open File", "", "Python Files (*.py);;JSON Files (*.json)")
         if selected_files:
             self.mcp_files = selected_files
@@ -108,23 +111,33 @@ class Init_Dialog(QWidget):
 class settings(QWidget):
     
     # signal: {system_prompt: str, temperature: int}
-    sig_save_settings = Signal(str, int)
+    sig_save_settings = Signal(str, int, list)
     
-    def __init__(self, sys_prompt_ori: str, temperature_ori: int):
+    def __init__(self, sys_prompt_ori: str, temperature_ori: int, mcp_files: list):
         super().__init__()
         self.setWindowTitle("Chat Settings")
         self.resize(300, 400)
         widget = QWidget()
         layout = QGridLayout(widget)
         
+        self.ori_mcp_files = mcp_files
+        self.addition_mcp_files = []
+        
         system_prompt_label = QLabel("System Prompt :")
         temp_label = QLabel("Temperature :")
+        self.mcp_files_label = QLabel(' ')
+        if not mcp_files:
+            self.mcp_files_label = QLabel(f'MCP Files: {mcp_files}')
+        else:
+            self.mcp_files_label = QLabel(f'MCP Files: ')
+        self.mcp_files_label.setWordWrap(True)
         
         self.sys_prompt_edit = QTextEdit()
         self.sys_prompt_edit.setText(sys_prompt_ori)
         
-        self.temp_slider = QSlider(Qt.Horizontal) # type: ignore
+        self.temp_slider = QSlider(Qt.Horizontal)  
         
+        add_mcp_files_button = QPushButton("Addition MCP Files")
         done_button = QPushButton("Done")
         
         # temperature of 10 times
@@ -134,7 +147,7 @@ class settings(QWidget):
         # set origin of temperature
         self.temp_slider.setValue(temperature_ori)
         temp_display_label = QLabel(str(float(temperature_ori) / 10.0))
-        temp_display_label.setAlignment(Qt.AlignCenter) # type: ignore
+        temp_display_label.setAlignment(Qt.AlignCenter)  
         
         # update label-of-temperature-display real-time (show in float format)
         self.temp_slider.valueChanged.connect(lambda val: temp_display_label.setText(str(float(val) / 10.0)))
@@ -145,8 +158,11 @@ class settings(QWidget):
         layout.addWidget(temp_label)
         layout.addWidget(self.temp_slider)
         layout.addWidget(temp_display_label)
+        layout.addWidget(self.mcp_files_label)
+        layout.addWidget(add_mcp_files_button)
         layout.addWidget(done_button)
         
+        add_mcp_files_button.clicked.connect(self.add_mcp_files)
         done_button.clicked.connect(self.close_wid)
         
         layout.setSpacing(10)
@@ -156,10 +172,20 @@ class settings(QWidget):
         self.setLayout(layout)
         
     
+    # opens file dialog and add addition mcp files
+    def add_mcp_files(self):
+        file_dialog = QFileDialog(self)
+        file_dialog.setWindowTitle("Choose Addition MCP Files")
+        file_dialog.setFileMode(QFileDialog.ExistingFile)  
+        selected_files, _ = file_dialog.getOpenFileNames(self, "Open File", "", "Python Files (*.py);;JSON Files (*.json)")
+        if selected_files:
+            self.addition_mcp_files = selected_files
+            self.mcp_files_label.setText(f"MCP Files: {self.addition_mcp_files + self.ori_mcp_files}")
+    
     # send signal: {system_prompt: str, temperature: int}, and close this window
     def close_wid(self):
         self.system_prompt = self.sys_prompt_edit.toPlainText()
-        self.sig_save_settings.emit(self.sys_prompt_edit.toPlainText(), self.temp_slider.value())
+        self.sig_save_settings.emit(self.sys_prompt_edit.toPlainText(), self.temp_slider.value(), self.addition_mcp_files)
         self.close()
 
 
@@ -251,7 +277,7 @@ class ChatBox(QWidget):
             # uncertain progress dialog
             self.progress_dialog = QProgressDialog("正在初始化 AI，请稍候...", "取消", 0, 0, self)
             self.progress_dialog.setWindowTitle("初始化中")
-            self.progress_dialog.setWindowModality(Qt.WindowModal) # type: ignore
+            self.progress_dialog.setWindowModality(Qt.WindowModal)  
             self.progress_dialog.setMinimumDuration(0)
             self.progress_dialog.setRange(0, 0)
             self.progress_dialog.show()
@@ -259,8 +285,8 @@ class ChatBox(QWidget):
 
             try:
                 self.ai = AI(mcp_paths=self.mcp_files, api_key=api_key)
-                self.temperature = int(self.ai.temperature * 10)  # type: ignore
-                self.system_prompt = self.ai.system_prompt  # type: ignore
+                self.temperature = int(self.ai.temperature * 10)   
+                self.system_prompt = self.ai.system_prompt   
                 self.progress_dialog.close()
             except Exception as e:
                 self.progress_dialog.close()
@@ -272,9 +298,9 @@ class ChatBox(QWidget):
     # proceed the args: {current_system_prompt: str, current_temperature: int} to the window
     # launch a new Setting window instance once called
     def open_settings(self, sys_prompt: str, temp: int):
-        self.temperature = int(self.ai.temperature * 10) # type: ignore
-        self.system_prompt = self.ai.system_prompt # type: ignore
-        self.settings_wid = settings(sys_prompt, temp)
+        self.temperature = int(self.ai.temperature * 10)  
+        self.system_prompt = self.ai.system_prompt  
+        self.settings_wid = settings(sys_prompt, temp, self.mcp_files)
         
         # receive signal when "Save" button pressed and Settings window closed
         # bound func 'handle_settings_save' right below
@@ -284,11 +310,14 @@ class ChatBox(QWidget):
         
     # act when received signal above
     # bounded above
-    def handle_settings_save(self, sys_prompt: str, temp : int):
+    def handle_settings_save(self, sys_prompt: str, temp : int, addition_mcp_files: list):
         self.system_prompt = sys_prompt
         self.temperature = temp
-        self.ai.system_prompt = self.system_prompt # type: ignore
-        self.ai.temperature = float(self.temperature) / 10.0 # type: ignore
+        self.ai.system_prompt = self.system_prompt
+        self.mcp_files += addition_mcp_files
+        self.ai.add_mcp_mods(addition_mcp_files)
+        self.system_prompt = self.ai.system_prompt
+        self.ai.temperature = float(self.temperature) / 10.0  
                 
         
     # main body for main window ( weired sentence
@@ -307,7 +336,7 @@ class ChatBox(QWidget):
 
 
         # split the main layout into to parts [left: contacts list, right: chat]
-        main_splitter = QSplitter(Qt.Horizontal) # type: ignore
+        main_splitter = QSplitter(Qt.Horizontal)  
         
         # left list of contacts
         self.chat_list = QListWidget()
@@ -330,7 +359,7 @@ class ChatBox(QWidget):
         # adjust freely for splitting input area and view chat area of right part
         # relatively main body of right parts
         # contains: scroll_area (for view chats), input_container (for user input)
-        chat_splitter = QSplitter(Qt.Vertical) # type: ignore
+        chat_splitter = QSplitter(Qt.Vertical)  
 
         # 'scroll area' for viewing chats
         self.scroll_area = QScrollArea()
@@ -637,7 +666,7 @@ class ChatBox(QWidget):
         max_text_width = max_bubble_width - 20
         
 
-        text_rect = fm.boundingRect(0, 0, max_text_width, 0, Qt.TextWordWrap, message) # type: ignore
+        text_rect = fm.boundingRect(0, 0, max_text_width, 0, Qt.TextWordWrap, message)  
         
         # calculating bubble width
         bubble_width = max(100, min(text_rect.width() + 20, max_bubble_width))
@@ -666,7 +695,7 @@ class ChatBox(QWidget):
 
     # auto-scroll to the bottom when new msg comes
     def scroll_to_bottom(self):
-        scroll_bar = self.findChild(QScrollArea).verticalScrollBar() # type: ignore
+        scroll_bar = self.findChild(QScrollArea).verticalScrollBar()  
         
         # execute with delay = 100ms for updating UI rendering
         QTimer.singleShot(100, lambda: scroll_bar.setValue(scroll_bar.maximum()))

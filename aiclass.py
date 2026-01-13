@@ -1,7 +1,7 @@
 import os 
 import sys
 import importlib.util
-from openai import OpenAI # type: ignore
+from openai import OpenAI  
 import json
 from mcp_utils import MCPServerManager, load_mcp_conf, exec_mcp_tools
 
@@ -175,12 +175,13 @@ class AI:
                 sys.modules[module_name] = mcp_module
                 
                 # load funcs, classes defined in module into module objs
-                spec.loader.exec_module(mcp_module) # type: ignore
+                spec.loader.exec_module(mcp_module)  
                 print(f"[Info] 加载 {module_name} 成功")
                 funcs = {}
                 for attr_name in dir(mcp_module):
                     """
                     dir(mcp_module): for example:
+                    
                     ['CONSTANT_VALUE', '__builtins__', '__cached__', '__doc__', '__file__', 
                     '__loader__', '__name__', '__package__', '__spec__', 
                     'func1', 'func2']
@@ -252,6 +253,21 @@ class AI:
             tools_desc = self.gen_tools_desc()
             self.system_prompt = tools_desc + '\n' + self.system_prompt
             
+    
+    # add addition mcp_files to the ai agent
+    def add_mcp_mods(self, valid_paths):
+        _, funcs = self.load_mult_mcp_mod(valid_paths)
+        self.funcs.update(funcs)
+        # print(self.funcs)
+        if self.funcs:
+            tools_desc = "你可以用一下工具来操作文件：\n"
+            for func_name, func in funcs.items():
+                doc = func.__doc__ or "无描述"
+                tools_desc += f"- {func_name}: {doc}\n"
+            self.system_prompt = tools_desc + '\n' + self.system_prompt   
+        self.update_system_prompt(self.system_prompt)     
+
+    
    # generate tools description
     def gen_tools_desc(self):
         if not self.funcs:
@@ -319,13 +335,13 @@ class AI:
         
         for step in range(max_iter):
             try:
-                response = self.client.chat.completions.create( # type: ignore
+                response = self.client.chat.completions.create(  
                     model="deepseek-chat",
                     temperature=self.temperature,
                     # feed ai with the whole conversation history
-                    messages=self.conv_his, # type: ignore
+                    messages=self.conv_his,  
                     stream=False
-                ) # type: ignore
+                )  
                 get_reply = response.choices[0].message.content
                 
                 # judge if ai wanna execute some functions
@@ -370,10 +386,17 @@ class AI:
             tools.append({"name": func_name, "description": doc})
         return tools
     
+    def print_tools_list(self):
+        print("\n可用工具：")
+        tools = self.get_available_tools()
+        for i, tool in enumerate(tools, 1):
+            print(f"{i:2}. {tool['name']}: {tool['description'][:60]}...")
+        
+    
     # update prompts
     def update_system_prompt(self, new_prompt):
         self.system_prompt = new_prompt
-        self.reset_conversation()
+        self.conv_his.append({"role": "system", "content": self.system_prompt})
     
     # update temperature
     def update_temperature(self, new_temp):
@@ -392,12 +415,6 @@ def main():
                 print("再见！")
                 break
             if not user_inp:
-                continue
-            if user_inp.lower() in ['tool', 'tools', '工具']:
-                print("\n可用工具：")
-                tools = ai.get_available_tools()
-                for i, tool in enumerate(tools, 1):
-                    print(f"{i:2}. {tool['name']}: {tool['description'][:60]}...")
                 continue
             
             if user_inp.lower() in ['clear', '清空']:
