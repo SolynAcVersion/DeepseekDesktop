@@ -1,4 +1,4 @@
-# DeepseekDesktop
+# Lynexus
 
 
 A Community Driven Agent
