@@ -1,7 +1,3 @@
-# Lynexus
-
-
-A Community Driven Agent
 
 
 ## 使用说明
